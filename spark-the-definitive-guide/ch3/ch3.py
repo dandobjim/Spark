@@ -4,7 +4,7 @@ import glob
 from pyspark.ml import Pipeline
 from pyspark.ml.clustering import KMeans
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
 from pyspark.sql.functions import window, column, desc, col, date_format
 
 
@@ -16,6 +16,7 @@ spark = SparkSession.builder \
 csv_path = os.path.abspath("../data/retail-data/by-day") + "/*.csv"
 
 ### STATIC
+"""
 staticDataFrame = spark.read \
     .option("header", "true") \
     .option("inferSchema", "true") \
@@ -37,7 +38,7 @@ staticDataFrame\
     .groupby(col("CustomerId"), window(col("InvoiceDate"), "1 day"))\
     .sum("total_cost")\
     .show(5)
-
+"""
 
 ### STREAMING
 """# Uncomment the following lines to run the streaming example
@@ -122,3 +123,4 @@ transformedTest = fittedPipeline.transform(testDataFrame)
 """
 
 # LOWER LEVEL API
+spark.sparkContext.parallelize([Row("1"),Row("2"),Row("3")]).toDF().show()
