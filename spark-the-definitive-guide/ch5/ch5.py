@@ -1,4 +1,4 @@
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Row
 from pyspark.sql.functions import col, lit, expr
 from pyspark.sql.types import StructField, StructType, StringType, LongType
 
@@ -159,3 +159,58 @@ dataFrames = df.randomSplit([0.25, 0.75], seed=seed)
 print(dataFrames[0].count() > dataFrames[1].count())
 
 #### UNION
+schema = df.schema
+newRows = [
+    Row("New Country", "Other Country", 5),
+    Row("New Country 2", "Other Country 3", 1),
+]
+
+parallelizedRows = spark.sparkContext.parallelize(newRows)
+
+newDF = spark.createDataFrame(parallelizedRows, schema)
+
+df.union(newDF) \
+    .where("count = 1") \
+    .where(col("ORIGIN_COUNTRY_NAME") != "United States") \
+    .show()
+
+##### SORTING ROWS
+df.sort("count").show(5)
+df.orderBy("count", "DEST_COUNTRY_NAME").show(5)
+df.orderBy(col("count"), col("DEST_COUNTRY_NAME")).show(5)
+
+"""
+SELECT *
+FROM dfTable
+ORDER BY count DESC, DEST_COUNTRY_NAME ASC LIMIT 2
+"""
+
+df.sort(col("count").desc(), col("DEST_COUNTRY_NAME").asc()).show(2)
+df.orderBy(col("count").desc(), col("DEST_COUNTRY_NAME").asc()).show(2)
+
+spark.read.format("json").load("../data/flight-data/json/*-summary.json") \
+    .sortWithinPartitions("count").show()
+
+##### LIMIT
+df.limit(5).show()  # SELECT * FROM dfTable LIMIT 5
+df.orderBy(expr("count").desc()).limit(6).show()  # SELECT * FROM dfTable ORDER BY count DESC LIMIT 6
+
+##### REPARTITION AND COALESCE
+"""
+
+print(df.rdd.getNumPartitions())
+df.repartition(5)
+
+df.repartition(5,col("DEST_COUNTRY_NAME"))
+"""
+
+df.repartition(5, col("DEST_COUNTRY_NAME")).coalesce(2)
+
+### GET ROWS FROM DRIVER
+"""
+collectDF = df.limit(10)
+collectDF.take(5)
+collectDF.show()
+collectDF.show(5, False)
+collectDF.collect()  # Returns a list of Rows
+"""
